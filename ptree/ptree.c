@@ -3,6 +3,8 @@
 #include <linux/init.h>
 #include <linux/sched.h>
 #include <linux/unistd.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
 MODULE_LICENSE("Dual BSD/GPL");
 #define __NR_ptreecall 356
 #define BUFFER_SIZE 1024
@@ -20,7 +22,7 @@ struct prinfo{
 		long depth;
 };
 
-static int dfs(struct prinfo *buf, int *nr, struct *task_struct cur_task, int depth){
+static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, int depth){
 	struct list_head *lh_children, lh_child, lh_sibling;
 	struct task_struct *child_tasks, *parent_task, *first_child, *next_sibling;
 	int rval = 1;
