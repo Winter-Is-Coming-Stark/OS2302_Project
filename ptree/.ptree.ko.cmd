@@ -1,0 +1,1 @@
+cmd_/home/winter/OS2302_Project/ptree/ptree.ko := arm-linux-androideabi-ld -r  -T /home/winter/android-kernel/kernel/goldfish/scripts/module-common.lds --build-id  -o /home/winter/OS2302_Project/ptree/ptree.ko /home/winter/OS2302_Project/ptree/ptree.o /home/winter/OS2302_Project/ptree/ptree.mod.o
