@@ -7,11 +7,20 @@ MODULE_LICENSE("Dual BSD/GPL");
 #define __NR_hellocall 356
 
 static int (*oldcall)(void);
+static int add(int a,int b){
+		return a + b;
+}
+
 static int sys_hellocall(int n,char* str)
 {
 		printk("this is my system second call!\n the uid = %ld\n str: %s\n",n,str);
+		int i;
+		i = add(1,2);
+		printk("%d\n",i);
 		return n;
 }
+
+
 
 static int addsyscall_init(void)
 {
