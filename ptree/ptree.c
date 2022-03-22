@@ -22,18 +22,22 @@ struct prinfo{
 		long depth;
 };
 
-static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, int depth){
-	struct list_head *lh_children, lh_child, lh_sibling;
+static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long depth){
+	struct list_head *lh_children, *lh_child, *lh_sibling;
 	struct task_struct *child_tasks, *parent_task, *first_child, *next_sibling;
-	int rval = 1;
+	int rval = 1, tmp_rv = 0;
 
 	// get info
 	if(cur_task == NULL){
 			printk(KERN_INFO "Traversing an empty task!\n");
-			return 0;
+			return -1;
 	}
 
 	int idx = *nr;
+	if(idx >= BUFFER_SIZE) {
+			printk(KERN_INFO "Index out of bound!\n");
+			return -1;
+	}
 
 	//parent
 	parent_task = cur_task->parent;
@@ -44,18 +48,18 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, int de
 	buf[idx].pid = cur_task->pid;
 	
 	//first_child
-	lh_child = cur_task->children;
-	if(list_empty(&lh_child)) buf[idx].first_child_pid = 0;
+	lh_child = &cur_task->children;
+	if(list_empty(lh_child)) buf[idx].first_child_pid = 0;
 	else{
-		first_child = list_entry(lh_child.next, struct task_struct, sibling);
+		first_child = list_entry(lh_child->next, struct task_struct, sibling);
 		buf[idx].first_child_pid = first_child->pid;
 	}
 
 	//next_sibling
-	lh_sibling = cur_task->sibling;
-	if(list_empty(&lh_sibling)) buf[idx].next_sibling_pid = 0;
+	lh_sibling = &cur_task->sibling;
+	if(list_empty(lh_sibling)) buf[idx].next_sibling_pid = 0;
 	else{
-		next_sibling = list_entry(lh_sibling.next, struct task_struct, sibling);
+		next_sibling = list_entry(lh_sibling->next, struct task_struct, sibling);
 		buf[idx].next_sibling_pid = next_sibling->pid;
 	}
 
@@ -73,13 +77,17 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, int de
 
 	*nr += 1;
 
-	if(list_empty(&lh_child)){
+	if(list_empty(lh_child)){
 		return rval;
 	}
 
-	list_for_each(lh_children, &lh_child) {
+	list_for_each(lh_children, lh_child) {
 		child_tasks = list_entry(lh_children, struct task_struct, sibling);
-		rval += dfs(buf, nr, child_tasks, depth + 1);
+		tmp_rv += dfs(buf, nr, child_tasks, depth + 1);
+
+		if(tmp_rv < 0) return -1;
+		
+		rval += tmp_rv;
 	}
 	
 	return rval;
@@ -98,9 +106,15 @@ static int sys_ptreecall(struct prinfo __user *buf, int __user *nr){
 		read_lock(&tasklist_lock);
 		rval = dfs(k_buf, &k_nr, &init_task, 0);
 		read_unlock(&tasklist_lock);
+
+		if(rval < 0){
+				printk(KERN_INFO "Return value less than 0. Something went wrong!\n");
+				return -1;
+		}
 		
-		if(copy_to_user(k_buf, buf, sizeof(struct prinfo) * k_nr)) {
+		if(copy_to_user(buf, k_buf, sizeof(struct prinfo) * BUFFER_SIZE)) {
 				printk(KERN_INFO "Failed to copy to user buffer!\n");
+				printk(KERN_INFO "%d %d",rval,k_nr);
 				return -1;
 		}
 		
