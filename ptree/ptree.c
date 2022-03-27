@@ -48,20 +48,39 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 	buf[idx].pid = cur_task->pid;
 	
 	//first_child
-	lh_child = &cur_task->children;
-	if(list_empty(lh_child)) buf[idx].first_child_pid = 0;
+	lh_child = &(cur_task->children);
+	if(list_empty_careful(lh_child)) buf[idx].first_child_pid = 0;
 	else{
 		first_child = list_entry(lh_child->next, struct task_struct, sibling);
 		buf[idx].first_child_pid = first_child->pid;
 	}
 
+	//comm
+	memcpy(buf[idx].comm, cur_task->comm, 64);
+
 	//next_sibling
-	lh_sibling = &cur_task->sibling;
-	if(list_empty(lh_sibling)) buf[idx].next_sibling_pid = 0;
+	lh_sibling = &(cur_task->sibling);
+	
+	if(list_empty(lh_sibling)){
+		buf[idx].next_sibling_pid = 0;
+	}
 	else{
 		next_sibling = list_entry(lh_sibling->next, struct task_struct, sibling);
 		buf[idx].next_sibling_pid = next_sibling->pid;
+		
+		//debugging
+		if(strcmp(buf[idx].comm, "ptreeTEST") == 0 || strcmp(buf[idx].comm, "sh") == 0){
+				printk(KERN_INFO "%d\n", next_sibling->cred->uid);
+				if(next_sibling == NULL) printk(KERN_INFO "next_sibling is null\n");
+				printk(KERN_INFO "%p\n", cur_task);
+				printk(KERN_INFO "%p\n", next_sibling);
+				printk(KERN_INFO "%p\n", &init_task);
+		}
+		if(buf[idx].next_sibling_pid == 1) buf[idx].next_sibling_pid = 0;
+		if(strcmp(buf[idx].comm,"ptreeTEST") == 0) printk(KERN_INFO "check%d\n", buf[idx].next_sibling_pid);
 	}
+	if(strcmp(buf[idx].comm,"ptreeTEST") == 0) printk(KERN_INFO "check%d\n", buf[idx].next_sibling_pid);
+
 
 	//state
 	buf[idx].state = cur_task->state;
@@ -69,9 +88,7 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 	//uid
 	buf[idx].uid = cur_task->cred->uid;
 
-	//comm
-	memcpy(buf[idx].comm, cur_task->comm, 64);
-
+	
 	//depth
 	buf[idx].depth = depth;
 
