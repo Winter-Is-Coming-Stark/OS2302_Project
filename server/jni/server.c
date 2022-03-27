@@ -10,11 +10,12 @@
 
 pthread_mutex_t count_mutex     = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  cond   = PTHREAD_COND_INITIALIZER;
-int flag = 0;
 volatile int count = 2;
+volatile int exit_op = 0;
 
 
 void *serve(void * newsockfd);
+void *exit_func(void *);
 int main(int argc, char *argv[]){
 		int sockfd, newsockfd, portno, clilen, n;
 		char buffer[256];
@@ -37,6 +38,13 @@ int main(int argc, char *argv[]){
 		clilen = sizeof(cli_addr);
 		printf("Server initiating...\n");
 
+		//close server
+		pthread_t close_thread;
+		if(pthread_create(&close_thread, NULL, exit_func, (void*)&exit_op) != 0){
+				fprintf(stderr, "Error - pthread_create() return code: %s\n", strerror(errno));
+				exit(EXIT_FAILURE);
+		}
+
 		while(1){
 			pthread_t thread;
 			
@@ -53,7 +61,7 @@ int main(int argc, char *argv[]){
 					exit(EXIT_FAILURE);	
 			}
 
-			if(flag == 1) break;
+			if(exit_op == 1) break;
 		}
 		close(sockfd);
 		return 0;
@@ -74,9 +82,17 @@ void *serve(void *sockfd){
 		while(count == 0) {
 				bzero(waiting_buffer,256);
 				n = read(newsockfd, waiting_buffer, 255);
+
 				if(n < 0){
 					printf("ERROR reading from socket!\n");
 					exit(1);
+				}
+
+				if(strcmp(waiting_buffer, ":q\n") == 0){
+					printf("Server thread closing...\n");
+					close(newsockfd);
+					pthread_detach(pthread_self());
+					return NULL;
 				}
 
 				if(count > 0) {
@@ -86,6 +102,11 @@ void *serve(void *sockfd){
 
 				n = write(newsockfd, wait_message,255);
 				
+				if(n < 0){
+					printf("ERROR writing to socket!\n");
+					exit(1);
+				}
+
 		}
 		pthread_mutex_lock(&count_mutex);
 		count--;
@@ -139,6 +160,20 @@ void *serve(void *sockfd){
 			n = write(newsockfd, buffer, 255);
 			if(n < 0) {
 				printf("ERROR writing from socket");
+			}
+		}
+}
+
+void *exit_func(void *arg)
+{
+		char buf[256];
+		while(1){
+			bzero(buf, 256);
+			fgets(buf, 255, stdin);
+
+			if(strcmp(buf, "exit\n") == 0){
+					*((int*)arg) = 1;
+					printf("server exiting...\n");
 			}
 		}
 }
