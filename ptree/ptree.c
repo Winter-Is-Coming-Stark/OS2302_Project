@@ -61,26 +61,13 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 	//next_sibling
 	lh_sibling = &(cur_task->sibling);
 	
-	if(list_empty(lh_sibling)){
+	if(lh_sibling->next == &parent_task->children){
 		buf[idx].next_sibling_pid = 0;
 	}
 	else{
 		next_sibling = list_entry(lh_sibling->next, struct task_struct, sibling);
 		buf[idx].next_sibling_pid = next_sibling->pid;
-		
-		//debugging
-		if(strcmp(buf[idx].comm, "ptreeTEST") == 0 || strcmp(buf[idx].comm, "sh") == 0){
-				printk(KERN_INFO "%d\n", next_sibling->cred->uid);
-				if(next_sibling == NULL) printk(KERN_INFO "next_sibling is null\n");
-				printk(KERN_INFO "%p\n", cur_task);
-				printk(KERN_INFO "%p\n", next_sibling);
-				printk(KERN_INFO "%p\n", &init_task);
-		}
-		if(buf[idx].next_sibling_pid == 1) buf[idx].next_sibling_pid = 0;
-		if(strcmp(buf[idx].comm,"ptreeTEST") == 0) printk(KERN_INFO "check%d\n", buf[idx].next_sibling_pid);
 	}
-	if(strcmp(buf[idx].comm,"ptreeTEST") == 0) printk(KERN_INFO "check%d\n", buf[idx].next_sibling_pid);
-
 
 	//state
 	buf[idx].state = cur_task->state;
