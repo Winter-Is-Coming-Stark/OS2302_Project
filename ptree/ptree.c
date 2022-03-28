@@ -9,6 +9,13 @@ MODULE_LICENSE("Dual BSD/GPL");
 #define __NR_ptreecall 356
 #define BUFFER_SIZE 1024
 
+/* This .c file is to create a system call which takes two arguments and return the
+ * process tree in a DFS order
+ *
+ * Created by wic 20/3/2022
+*/
+
+
 static int (*oldcall)(void);
 
 struct prinfo{
@@ -22,6 +29,7 @@ struct prinfo{
 		long depth;
 };
 
+//get info of a task and dfs
 static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long depth){
 	struct list_head *lh_children, *lh_child, *lh_sibling;
 	struct task_struct *child_tasks, *parent_task, *first_child, *next_sibling;
@@ -32,7 +40,8 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 			printk(KERN_INFO "Traversing an empty task!\n");
 			return -1;
 	}
-
+	
+	//get idx
 	int idx = *nr;
 	if(idx >= BUFFER_SIZE) {
 			printk(KERN_INFO "Index out of bound!\n");
@@ -49,6 +58,8 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 	
 	//first_child
 	lh_child = &(cur_task->children);
+
+	//has no child
 	if(list_empty_careful(lh_child)) buf[idx].first_child_pid = 0;
 	else{
 		first_child = list_entry(lh_child->next, struct task_struct, sibling);
@@ -61,6 +72,7 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 	//next_sibling
 	lh_sibling = &(cur_task->sibling);
 	
+	//has no sibling
 	if(lh_sibling->next == &parent_task->children){
 		buf[idx].next_sibling_pid = 0;
 	}
@@ -84,7 +96,8 @@ static int dfs(struct prinfo *buf, int *nr, struct task_struct *cur_task, long d
 	if(list_empty(lh_child)){
 		return rval;
 	}
-
+	
+	//traverse each child
 	list_for_each(lh_children, lh_child) {
 		child_tasks = list_entry(lh_children, struct task_struct, sibling);
 		tmp_rv += dfs(buf, nr, child_tasks, depth + 1);

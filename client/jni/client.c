@@ -7,6 +7,15 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+/*
+ * Create a client source
+ * Connect to the server
+ * Sent message and wait for encryption
+ * Print the encrytion
+ *
+ * Created by wic 3/23/2022
+*/
+
 int main(int argc, char *argv[]){
 		int sockfd, portno, n;
 		struct sockaddr_in serv_addr;
@@ -28,7 +37,8 @@ int main(int argc, char *argv[]){
 		serv_addr.sin_family = AF_INET;
 		bcopy((char*)server->h_addr, (char*)&serv_addr.sin_addr.s_addr, server->h_length);
 		serv_addr.sin_port = htons(portno);
-
+		
+		// connect to the server
 		if(connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0){
 			printf("ERROR connecting");
 			exit(1);
@@ -47,7 +57,8 @@ int main(int argc, char *argv[]){
 				printf("ERROW writing to the socket!");
 				exit(1);
 			}
-
+			
+			// check if the user want to quit
 			if(strcmp(buffer, ":q\n") == 0){
 					printf("Clinet closing...\n");
 					close(sockfd);

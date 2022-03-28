@@ -8,6 +8,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
+/* Create a server process. 
+ * Listen to and accept client processes
+ * Receive from clients and encrypt the message
+ * Send the encryption back
+ * Use mutex lock to limit the clients being served
+ *
+ * Created by wic 3/23/2022
+*/
+
+
 pthread_mutex_t count_mutex     = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  cond   = PTHREAD_COND_INITIALIZER;
 volatile int count = 2;
@@ -74,11 +84,13 @@ void *serve(void *sockfd){
 
 		char buffer[256], waiting_buffer[256];
 		
-		//wait for resources
+		// something went wrong
 		if(count < 0){
 				printf("ERROR count less than zero!\n");
 				exit(1);
 		}
+
+		// wait until there are idle resources
 		while(count == 0) {
 				bzero(waiting_buffer,256);
 				n = read(newsockfd, waiting_buffer, 255);
@@ -87,7 +99,8 @@ void *serve(void *sockfd){
 					printf("ERROR reading from socket!\n");
 					exit(1);
 				}
-
+				
+				// check if the client want to quit
 				if(strcmp(waiting_buffer, ":q\n") == 0){
 					printf("Server thread closing...\n");
 					close(newsockfd);
@@ -99,7 +112,8 @@ void *serve(void *sockfd){
 					flag = 1;
 					break;
 				}
-
+				
+				//write wait message to client
 				n = write(newsockfd, wait_message,255);
 				
 				if(n < 0){
@@ -108,6 +122,8 @@ void *serve(void *sockfd){
 				}
 
 		}
+
+		//allocate resources
 		pthread_mutex_lock(&count_mutex);
 		count--;
 		pthread_mutex_unlock(&count_mutex);
@@ -127,7 +143,8 @@ void *serve(void *sockfd){
 					flag = 0;
 					strcpy(buffer, waiting_buffer);
 			}
-
+			
+			//check if the client want to quit
 			if(strcmp(buffer,":q\n") == 0){
 					//release resource
 					pthread_mutex_lock(&count_mutex);
